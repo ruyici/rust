@@ -1,0 +1,29 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Add upstream
+        run: |
+          git remote add upstream https://github.com/rust-lang/rust.git
+          git fetch upstream main
+
+      - name: Update sync branch
+        run: |
+          git checkout -B sync/upstream-main upstream/main
+          git push origin sync/upstream-main --force-with-lease
