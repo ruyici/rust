@@ -1,0 +1,61 @@
+name: CI (riscv64)
+
+on:
+  push:
+    branches: [sync/upstream-main, main]
+
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  # No permissions to secrets.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  RUSTFLAGS: -D warnings
+  CARGO_TERM_COLOR: always
+
+jobs:
+  riscv64gc-ci:
+    name: rust-riscv64gc-ci
+    runs-on: [self-hosted, Linux, x64]
+    steps:
+      # 1. fetch code
+      - name: Checkout source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Fetch sync branch
+        run: |
+          git fetch origin sync/upstream-main:refs/remotes/origin/sync/upstream-main
+
+      # 2. fetch sync/upstream-main and get commit hash
+      - name: Get sync/upstream-main HEAD commit
+        id: get_commit
+        run: |
+          echo "RUST_COMMITID=$(git rev-parse origin/sync/upstream-main)" >> $GITHUB_ENV
+
+      # 3. trigger Jenkins job
+      - name: Trigger Jenkins Job
+        id: jenkins
+        run: |
+          set -euo pipefail
+
+          set +e
+          bash /home/jenkins/scripts/jenkins-run.sh "${RUST_COMMITID}" null | tee jenkins.log
+          JENKINS_RC=${PIPESTATUS[0]}
+          set -e
+
+          echo "JENKINS_RC=$JENKINS_RC" >> $GITHUB_ENV
+
+      - name: Check Jenkins exit code
+        run: |
+          if [[ "${JENKINS_RC}" -ne 0 ]]; then
+            echo "Jenkins job failed with exit code ${JENKINS_RC}"
+            exit ${JENKINS_RC}
+          fi
