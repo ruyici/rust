@@ -2,7 +2,7 @@ name: Sync upstream
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "0 */12 * * *"
   workflow_dispatch:
 
 permissions:
@@ -28,3 +28,14 @@ jobs:
         run: |
           git checkout -B sync/upstream-main upstream/main
           git push origin sync/upstream-main --force-with-lease
+
+      - name: Trigger CI
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "ci-riscv64.yml",
+              ref: "sync/upstream-main"
+            })
