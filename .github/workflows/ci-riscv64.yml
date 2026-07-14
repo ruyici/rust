@@ -3,6 +3,12 @@ name: CI (riscv64)
 on:
   workflow_dispatch:
 
+    inputs:
+      commit:
+        description: "Rust commit to test"
+        required: false
+        default: ""
+
   pull_request_target:
     types: [opened, synchronize, reopened]
 
@@ -28,16 +34,29 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
-      - name: Fetch sync branch
+       #
+      # checkout actual rust source
+      #
+      - name: Checkout sync/upstream-main
         run: |
-          git fetch origin sync/upstream-main:refs/remotes/origin/sync/upstream-main
+          git fetch origin sync/upstream-main
+          git checkout sync/upstream-main
+
+      - name: Get Rust commit
+        run: |
+          echo "RUST_COMMITID=$(git rev-parse HEAD)" >> $GITHUB_ENV
+          echo "Testing commit:"
+          git rev-parse HEAD
+
+      #- name: Fetch sync branch
+      #  run: |
+      #    git fetch origin sync/upstream-main:refs/remotes/origin/sync/upstream-main
 
       # 2. fetch sync/upstream-main and get commit hash
-      - name: Get sync/upstream-main HEAD commit
-        id: get_commit
-        run: |
-          echo "RUST_COMMITID=$(git rev-parse origin/sync/upstream-main)" >> $GITHUB_ENV
+      #- name: Get sync/upstream-main HEAD commit
+      #  id: get_commit
+      #  run: |
+      #    echo "RUST_COMMITID=$(git rev-parse origin/sync/upstream-main)" >> $GITHUB_ENV
 
       # 3. trigger Jenkins job
       - name: Trigger Jenkins Job
